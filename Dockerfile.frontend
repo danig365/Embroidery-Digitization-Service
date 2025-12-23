@@ -1,0 +1,26 @@
+FROM node:18-alpine
+
+WORKDIR /app/frontend
+
+# Copy package files
+COPY package*.json .
+
+# Install dependencies
+RUN npm ci
+
+# Copy source code
+COPY . .
+
+# Create .env.production
+RUN echo "REACT_APP_API_URL=https://yourdomain.com/api" > .env.production && \
+    echo "REACT_APP_STRIPE_PUBLISHABLE_KEY=pk_live_YOUR_KEY" >> .env.production
+
+# Build production bundle
+RUN npm run build
+
+# Use a lightweight server
+RUN npm install -g serve
+
+EXPOSE 3000
+
+CMD ["serve", "-s", "build", "-l", "3000"]
