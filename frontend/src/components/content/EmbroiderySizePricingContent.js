@@ -275,7 +275,7 @@ function EmbroiderySizePricingContent() {
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "1fr 1fr auto",
+              gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))",
               gap: "8px",
               alignItems: "end",
             }}
@@ -307,6 +307,7 @@ function EmbroiderySizePricingContent() {
                   border: "1px solid #d1d5db",
                   borderRadius: "6px",
                   fontSize: "12px",
+                  boxSizing: "border-box",
                 }}
               />
             </div>
@@ -337,6 +338,7 @@ function EmbroiderySizePricingContent() {
                   border: "1px solid #d1d5db",
                   borderRadius: "6px",
                   fontSize: "12px",
+                  boxSizing: "border-box",
                 }}
               />
             </div>
@@ -415,7 +417,8 @@ function EmbroiderySizePricingContent() {
             <div
               style={{
                 display: "grid",
-                gap: "8px",
+                gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+                gap: "12px",
               }}
             >
               {tiers.map((tier) => (
@@ -471,48 +474,53 @@ function PricingTierCard({
         borderRadius: "8px",
         padding: "12px",
         display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
+        flexDirection: "column",
         gap: "12px",
       }}
     >
       {isEditing ? (
         <>
-          <div style={{ display: "flex", gap: "8px", flex: 1 }}>
-            <input
-              type="number"
-              value={editSize}
-              onChange={(e) => setEditSize(e.target.value)}
-              style={{
-                width: "80px",
-                padding: "6px 8px",
-                border: "1px solid #d1d5db",
-                borderRadius: "6px",
-                fontSize: "12px",
-              }}
-            />
-            <span style={{ padding: "6px", color: "#6b7280" }}>cm</span>
-            <span style={{ padding: "6px", color: "#6b7280" }}>=</span>
-            <input
-              type="number"
-              value={editPrice}
-              onChange={(e) => setEditPrice(e.target.value)}
-              style={{
-                width: "80px",
-                padding: "6px 8px",
-                border: "1px solid #d1d5db",
-                borderRadius: "6px",
-                fontSize: "12px",
-              }}
-            />
-            <span style={{ padding: "6px", color: "#6b7280" }}>tokens</span>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", alignItems: "center" }}>
+            <div>
+              <label style={{ display: "block", fontSize: "11px", fontWeight: "600", color: "#6b7280", marginBottom: "4px" }}>Size (cm)</label>
+              <input
+                type="number"
+                value={editSize}
+                onChange={(e) => setEditSize(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "6px 8px",
+                  border: "1px solid #d1d5db",
+                  borderRadius: "6px",
+                  fontSize: "12px",
+                  boxSizing: "border-box",
+                }}
+              />
+            </div>
+            <div>
+              <label style={{ display: "block", fontSize: "11px", fontWeight: "600", color: "#6b7280", marginBottom: "4px" }}>Price (tokens)</label>
+              <input
+                type="number"
+                value={editPrice}
+                onChange={(e) => setEditPrice(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "6px 8px",
+                  border: "1px solid #d1d5db",
+                  borderRadius: "6px",
+                  fontSize: "12px",
+                  boxSizing: "border-box",
+                }}
+              />
+            </div>
           </div>
           <div style={{ display: "flex", gap: "6px" }}>
             <button
               onClick={() => onEdit(editSize, editPrice)}
               disabled={saving}
               style={{
-                padding: "6px 10px",
+                flex: 1,
+                padding: "8px 12px",
                 background: saving ? "#9ca3af" : "#10b981",
                 color: "white",
                 border: "none",
@@ -522,6 +530,7 @@ function PricingTierCard({
                 fontWeight: "600",
                 display: "flex",
                 alignItems: "center",
+                justifyContent: "center",
                 gap: "4px",
               }}
             >
@@ -532,7 +541,8 @@ function PricingTierCard({
               onClick={onCancelEdit}
               disabled={saving}
               style={{
-                padding: "6px 10px",
+                flex: 1,
+                padding: "8px 12px",
                 background: "#6b7280",
                 color: "white",
                 border: "none",
@@ -550,14 +560,14 @@ function PricingTierCard({
         <>
           <div
             style={{
-              flex: 1,
               display: "flex",
               alignItems: "center",
               gap: "8px",
               padding: "4px 0",
+              flexWrap: "wrap",
             }}
           >
-            <span style={{ fontSize: "13px", fontWeight: "600", color: "#111827", minWidth: "40px" }}>
+            <span style={{ fontSize: "13px", fontWeight: "600", color: "#111827" }}>
               {tier.size_cm}cm
             </span>
             <span style={{ color: "#d1d5db" }}>→</span>
@@ -571,7 +581,8 @@ function PricingTierCard({
               onClick={onStartEdit}
               disabled={saving}
               style={{
-                padding: "6px 10px",
+                flex: 1,
+                padding: "8px 10px",
                 background: "#f3f4f6",
                 color: "#374151",
                 border: "1px solid #d1d5db",
@@ -587,7 +598,8 @@ function PricingTierCard({
               onClick={onDelete}
               disabled={saving}
               style={{
-                padding: "6px 10px",
+                flex: 1,
+                padding: "8px 10px",
                 background: "#fee2e2",
                 color: "#991b1b",
                 border: "1px solid #fca5a5",
@@ -597,6 +609,7 @@ function PricingTierCard({
                 fontWeight: "600",
                 display: "flex",
                 alignItems: "center",
+                justifyContent: "center",
                 gap: "4px",
               }}
             >

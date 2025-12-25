@@ -230,7 +230,7 @@ function SettingsContent({ isAdmin = false }) {
           <h3 style={{ fontSize: "14px", fontWeight: "600", color: "#111827", marginBottom: "12px" }}>
             Profile Statistics
           </h3>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "10px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: "10px" }}>
             {/* Total Designs */}
             <div style={{ 
               background: "white", 
@@ -361,6 +361,9 @@ function SettingsContent({ isAdmin = false }) {
           </div>
         )}
 
+        {/* Profile & Password Section Grid */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "16px", marginBottom: "16px" }}>
+          
         {/* Profile Information */}
         <div
           style={{
@@ -368,7 +371,6 @@ function SettingsContent({ isAdmin = false }) {
             borderRadius: "12px",
             padding: "12px",
             boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-            marginBottom: "16px",
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "16px" }}>
@@ -421,6 +423,7 @@ function SettingsContent({ isAdmin = false }) {
                     borderRadius: "8px",
                     fontSize: "12px",
                     outline: "none",
+                    boxSizing: "border-box",
                   }}
                 />
               </div>
@@ -441,6 +444,7 @@ function SettingsContent({ isAdmin = false }) {
                     borderRadius: "8px",
                     fontSize: "12px",
                     outline: "none",
+                    boxSizing: "border-box",
                   }}
                 />
               </div>
@@ -463,6 +467,7 @@ function SettingsContent({ isAdmin = false }) {
                   borderRadius: "8px",
                   fontSize: "12px",
                   outline: "none",
+                  boxSizing: "border-box",
                 }}
               />
             </div>
@@ -506,7 +511,6 @@ function SettingsContent({ isAdmin = false }) {
             borderRadius: "12px",
             padding: "12px",
             boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-            marginBottom: "16px",
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "16px" }}>
@@ -535,6 +539,7 @@ function SettingsContent({ isAdmin = false }) {
                     borderRadius: "8px",
                     fontSize: "12px",
                     outline: "none",
+                    boxSizing: "border-box",
                   }}
                 />
                 <button
@@ -572,6 +577,7 @@ function SettingsContent({ isAdmin = false }) {
                   borderRadius: "8px",
                   fontSize: "12px",
                   outline: "none",
+                  boxSizing: "border-box",
                 }}
               />
             </div>
@@ -592,6 +598,7 @@ function SettingsContent({ isAdmin = false }) {
                   borderRadius: "8px",
                   fontSize: "12px",
                   outline: "none",
+                  boxSizing: "border-box",
                 }}
               />
             </div>
@@ -626,6 +633,7 @@ function SettingsContent({ isAdmin = false }) {
               )}
             </button>
           </form>
+        </div>
         </div>
 
         {/* Transaction History */}

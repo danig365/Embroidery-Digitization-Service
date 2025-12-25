@@ -181,7 +181,7 @@ function BuyTokensContent() {
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "1fr",
+              gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
               gap: "10px",
             }}
           >
@@ -302,7 +302,6 @@ function PackageCard({ pkg, onPurchase, processing }) {
           </>
         ) : (
           <>
-            <CreditCard size={16} />
             Buy Now
           </>
         )}

@@ -1105,8 +1105,15 @@ def cart_checkout(request):
         # Get requested file formats from request
         requested_formats = request.data.get('requested_formats', ['dst', 'pes', 'jef'])
         
-        # Validate formats
-        valid_formats = ['dst', 'pes', 'jef', 'exp', 'vp3', 'xxx']
+        # Validate formats - All 22 supported embroidery formats
+        valid_formats = [
+            # Industrial
+            'dst', 'dsb', 'dsz', 'exp', 'tbf', 'fdr', 'stx',
+            # Domestic
+            'pes', 'pec', 'jef', 'sew', 'hus', 'vip', 'vp3', 'xxx',
+            # Commercial
+            'cmd', 'tap', 'tim', 'emt', '10o', 'ds9'
+        ]
         requested_formats = [f.lower() for f in requested_formats if f.lower() in valid_formats]
         
         if not requested_formats:
@@ -1277,8 +1284,15 @@ def create_order(request):
         # Get requested file formats from request
         requested_formats = request.data.get('requested_formats', ['dst', 'pes', 'jef'])
         
-        # Validate formats
-        valid_formats = ['dst', 'pes', 'jef', 'exp', 'vp3', 'xxx']
+        # Validate formats - All 22 supported embroidery formats
+        valid_formats = [
+            # Industrial
+            'dst', 'dsb', 'dsz', 'exp', 'tbf', 'fdr', 'stx',
+            # Domestic
+            'pes', 'pec', 'jef', 'sew', 'hus', 'vip', 'vp3', 'xxx',
+            # Commercial
+            'cmd', 'tap', 'tim', 'emt', '10o', 'ds9'
+        ]
         requested_formats = [f.lower() for f in requested_formats if f.lower() in valid_formats]
         
         if not requested_formats:
