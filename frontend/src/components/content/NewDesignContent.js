@@ -34,9 +34,14 @@ function NewDesignContent({ onTokenUpdate }) {
   // AI Generation fields
   const [aiPrompt, setAiPrompt] = useState("");
 
-  // Advanced Settings
-  const [stitchDensity, setStitchDensity] = useState(5);
+  // Machine Settings
+  const [selectedMachineBrand, setSelectedMachineBrand] = useState("Brother");
+  const [selectedFormat, setSelectedFormat] = useState("pes");
+  const [embroiderySizeCm, setEmbroiderySizeCm] = useState(10);
+
+  // Embroidery Settings (for Tab 2 right panel controls)
   const [stitchType, setStitchType] = useState("Satin");
+  const [stitchDensity, setStitchDensity] = useState(5);
   const [designWidth, setDesignWidth] = useState(100);
   const [designHeight, setDesignHeight] = useState(100);
   const [hoopSize, setHoopSize] = useState("100x100mm");
@@ -45,11 +50,51 @@ function NewDesignContent({ onTokenUpdate }) {
   const [mirrorV, setMirrorV] = useState(false);
   const [underlay, setUnderlay] = useState(true);
   const [jumpTrim, setJumpTrim] = useState(true);
-  const [embroiderySizeCm, setEmbroiderySizeCm] = useState(10);
 
-
+  // Predefined options for dropdowns
   const stitchTypes = ["Satin", "Fill", "Running", "Bean"];
-  const hoopSizes = ["100x100mm", "130x180mm", "200x200mm", "Custom"];
+  const hoopSizes = ["50x50mm", "100x100mm", "150x150mm", "200x200mm", "250x250mm"];
+
+  // Machine brands with their supported formats
+  const machineBrands = {
+    "Brother": { formats: ["pes", "pec"] },
+    "Janome": { formats: ["jef", "sew"] },
+    "Husqvarna": { formats: ["vip", "vp3", "hus"] },
+    "Elna": { formats: ["jef", "exp"] },
+    "Pfaff": { formats: ["vp3", "exp", "pes"] },
+    "Tajima": { formats: ["dst", "jef", "exp"] },
+    "Barudan": { formats: ["dsb", "dst", "exp"] },
+    "Singer": { formats: ["xxx", "vip"] },
+    "Babylock": { formats: ["pes", "dst"] },
+    "Melco": { formats: ["exp", "dst"] },
+    "Fortron": { formats: ["fdr"] },
+    "Sunstar": { formats: ["stx"] },
+    "Inbro": { formats: ["emt"] },
+    "Compucon": { formats: ["cmd"] },
+    "Happy": { formats: ["tap"] },
+    "ZSK": { formats: ["dsz"] },
+    "Bernina": { formats: ["pes", "exp"] }
+  };
+
+  const formatInfo = {
+    "pes": "PES (Brother/Babylock)",
+    "pec": "PEC (Brother)",
+    "jef": "JEF (Janome/Elna)",
+    "sew": "SEW (Janome)",
+    "vip": "VIP (Husqvarna/Viking/Singer)",
+    "vp3": "VP3 (Husqvarna/Pfaff)",
+    "hus": "HUS (Husqvarna)",
+    "exp": "EXP (Melco/Elna/Pfaff/Tajima)",
+    "dst": "DST (Tajima/Barudan/Baby Lock/Melco)",
+    "dsb": "DSB (Barudan)",
+    "xxx": "XXX (Singer)",
+    "fdr": "FDR (Fortron)",
+    "stx": "STX (Sunstar)",
+    "emt": "EMT (Inbro)",
+    "cmd": "CMD (Compucon)",
+    "tap": "TAP (Happy)",
+    "dsz": "DSZ (ZSK)"
+  };
 
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
@@ -89,21 +134,9 @@ function NewDesignContent({ onTokenUpdate }) {
         body: JSON.stringify({
           design_id: designId || undefined,
           prompt: aiPrompt,
-          // EMBROIDERY SETTINGS - FULL DETAILS
-          stitch_density: stitchDensity,
-          stitch_type: stitchType,
-          auto_trim: true,
-          underlay: underlay,
-          jump_trim: jumpTrim,
-          // CANVAS SETTINGS
-          canvas_width: 1200,
-          canvas_height: 1200,
-          design_width: designWidth,
-          design_height: designHeight,
-          hoop_size: hoopSize,
-          rotation: rotation,
-          mirror_horizontal: mirrorH,
-          mirror_vertical: mirrorV,
+          machine_brand: selectedMachineBrand,
+          requested_format: selectedFormat,
+          embroidery_size_cm: embroiderySizeCm,
         }),
       });
 
@@ -112,18 +145,14 @@ function NewDesignContent({ onTokenUpdate }) {
       if (response.ok && data.success) {
         setDesignId(data.design.id);
         
-        // Handle normal_image URL
-        const normalImageUrl = buildImageUrl(data.design.normal_image);
-        setNormalImage(normalImageUrl);
-        
-        // Also set embroidery preview if it was generated
+        // Set embroidery preview (only image generated)
         if (data.design.embroidery_preview) {
           const embroideryUrl = buildImageUrl(data.design.embroidery_preview);
           setEmbroideryPreview(embroideryUrl);
         }
         
         if (onTokenUpdate) onTokenUpdate();
-        setMessage(`✅ AI images generated! Both normal and embroidery preview created. Cost: ${tokenCosts.ai_image_generation} tokens`);
+        setMessage(`✅ Embroidery preview generated! Cost: ${tokenCosts.ai_image_generation} tokens`);
       } else {
         setMessage(`❌ ${data.error || "Generation failed"}`);
       }
@@ -279,7 +308,7 @@ function NewDesignContent({ onTokenUpdate }) {
 
   const tabs = [
     { id: 0, name: "Generate with AI", icon: Sparkles },
-    { id: 1, name: "Advanced Settings", icon: SettingsIcon },
+    { id: 1, name: "Machine Settings", icon: SettingsIcon },
   ];
 
   return (
@@ -308,43 +337,24 @@ function NewDesignContent({ onTokenUpdate }) {
           {activeTab === 0 && (
             // Tab 1: Generate with AI
             <div style={{ width: "100%", maxWidth: "800px" }}>
-              {normalImage || embroideryPreview ? (
+              {embroideryPreview ? (
                 <div>
                   <div style={{ display: "flex", gap: "20px", justifyContent: "center", marginBottom: "20px", flexWrap: "wrap" }}>
-                    {normalImage && (
-                      <div style={{ textAlign: "center" }}>
-                        <img
-                          src={normalImage}
-                          alt="Normal"
-                          style={{
-                            maxWidth: "350px",
-                            maxHeight: "350px",
-                            borderRadius: "10px",
-                            boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
-                          }}
-                        />
-                        <p style={{ marginTop: "10px", color: "#6B7280", fontSize: "13px", fontWeight: "500" }}>
-                          Normal Image
-                        </p>
-                      </div>
-                    )}
-                    {embroideryPreview && (
-                      <div style={{ textAlign: "center" }}>
-                        <img
-                          src={embroideryPreview}
-                          alt="Embroidery Preview"
-                          style={{
-                            maxWidth: "350px",
-                            maxHeight: "350px",
-                            borderRadius: "10px",
-                            boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
-                          }}
-                        />
-                        <p style={{ marginTop: "10px", color: "#6B7280", fontSize: "13px", fontWeight: "500" }}>
-                          Embroidery Preview
-                        </p>
-                      </div>
-                    )}
+                    <div style={{ textAlign: "center" }}>
+                      <img
+                        src={embroideryPreview}
+                        alt="Embroidery Preview"
+                        style={{
+                          maxWidth: "350px",
+                          maxHeight: "350px",
+                          borderRadius: "10px",
+                          boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
+                        }}
+                      />
+                      <p style={{ marginTop: "10px", color: "#6B7280", fontSize: "13px", fontWeight: "500" }}>
+                        Embroidery Preview
+                      </p>
+                    </div>
                   </div>
                 </div>
               ) : (
@@ -366,24 +376,106 @@ function NewDesignContent({ onTokenUpdate }) {
 
 
           {activeTab === 1 && (
-            // Tab 2: Advanced Settings
+            // Tab 2: Machine Settings
             <div style={{ textAlign: "center", width: "100%", maxWidth: "500px" }}>
               <SettingsIcon size={48} color="#9CA3AF" style={{ margin: "0 auto 20px" }} />
               <h3 style={{ fontSize: "18px", fontWeight: "600", color: "#111827", marginBottom: "12px" }}>
-                Advanced Settings
+                Machine Settings
               </h3>
               <p style={{ color: "#6B7280", fontSize: "14px" }}>
-                Configure detailed embroidery parameters
+                Select your embroidery machine brand and file format
               </p>
               <div style={{ marginTop: "20px", textAlign: "left" }}>
-                <SettingRow label="Stitch Type" value={stitchType} />
-                <SettingRow label="Stitch Density" value={`${stitchDensity} stitches/inch`} />
-                <SettingRow label="Dimensions" value={`${designWidth} × ${designHeight} mm`} />
-                <SettingRow label="Hoop Size" value={hoopSize} />
-                <SettingRow label="Rotation" value={`${rotation}°`} />
-                <SettingRow label="Mirror H/V" value={`${mirrorH ? "✓" : "✗"} / ${mirrorV ? "✓" : "✗"}`} />
-                <SettingRow label="Underlay" value={underlay ? "Enabled" : "Disabled"} />
-                <SettingRow label="Jump Trim" value={jumpTrim ? "Enabled" : "Disabled"} />
+                <div style={{ marginBottom: "16px" }}>
+                  <label style={{ display: "block", marginBottom: "8px", fontSize: "13px", fontWeight: "500", color: "#374151" }}>
+                    Machine Brand
+                  </label>
+                  <select
+                    value={selectedMachineBrand}
+                    onChange={(e) => {
+                      setSelectedMachineBrand(e.target.value);
+                      const formats = machineBrands[e.target.value].formats;
+                      setSelectedFormat(formats[0]);
+                    }}
+                    style={{
+                      width: "100%",
+                      padding: "10px 12px",
+                      border: "1px solid #E5E7EB",
+                      borderRadius: "8px",
+                      fontSize: "13px",
+                      cursor: "pointer",
+                      fontFamily: "inherit",
+                      background: "white",
+                    }}
+                  >
+                    {Object.keys(machineBrands).map((brand) => (
+                      <option key={brand} value={brand}>
+                        {brand}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div style={{ marginBottom: "16px" }}>
+                  <label style={{ display: "block", marginBottom: "8px", fontSize: "13px", fontWeight: "500", color: "#374151" }}>
+                    File Format
+                  </label>
+                  <select
+                    value={selectedFormat}
+                    onChange={(e) => setSelectedFormat(e.target.value)}
+                    style={{
+                      width: "100%",
+                      padding: "10px 12px",
+                      border: "1px solid #E5E7EB",
+                      borderRadius: "8px",
+                      fontSize: "13px",
+                      marginBottom: "8px",
+                      cursor: "pointer",
+                      fontFamily: "inherit",
+                      background: "white",
+                    }}
+                  >
+                    {machineBrands[selectedMachineBrand].formats.map((format) => (
+                      <option key={format} value={format}>
+                        {formatInfo[format]}
+                      </option>
+                    ))}
+                  </select>
+                  <p style={{ fontSize: "11px", color: "#9CA3AF", margin: "0" }}>
+                    Select the file format your {selectedMachineBrand} machine supports
+                  </p>
+                </div>
+
+                <div>
+                  <label
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      fontSize: "13px",
+                      fontWeight: "500",
+                      color: "#374151",
+                      marginBottom: "8px",
+                    }}
+                  >
+                    <span>Embroidery Size</span>
+                    <span style={{ color: "#6B7280", fontWeight: "500" }}>{embroiderySizeCm} cm</span>
+                  </label>
+                  <input
+                    type="range"
+                    min="5"
+                    max="40"
+                    value={embroiderySizeCm}
+                    onChange={(e) => setEmbroiderySizeCm(parseInt(e.target.value))}
+                    style={{
+                      width: "100%",
+                      cursor: "pointer",
+                      accentColor: "#667eea",
+                    }}
+                  />
+                  <p style={{ fontSize: "11px", color: "#9CA3AF", margin: "8px 0 0 0" }}>
+                    Choose the size of your embroidery design (5-40 cm)
+                  </p>
+                </div>
               </div>
             </div>
           )}
@@ -662,13 +754,6 @@ function NewDesignContent({ onTokenUpdate }) {
                     marginBottom: "16px",
                   }}
                 />
-              </Section>
-
-              <Section icon={SettingsIcon} title="Additional Options">
-                <ToggleRow label="Mirror Horizontal" checked={mirrorH} onChange={setMirrorH} />
-                <ToggleRow label="Mirror Vertical" checked={mirrorV} onChange={setMirrorV} />
-                <ToggleRow label="Underlay" checked={underlay} onChange={setUnderlay} />
-                <ToggleRow label="Jump Stitch Trimming" checked={jumpTrim} onChange={setJumpTrim} />
               </Section>
             </>
           )}

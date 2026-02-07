@@ -261,6 +261,13 @@ function OrdersContent({ onChatClick }) {
                   {order.design_details.prompt}
                 </p>
               )}
+              {/* Machine Settings */}
+              {(order.design_details?.machine_brand || order.design_details?.requested_format) && (
+                <div style={{ marginTop: "6px", fontSize: "11px", color: "#6b7280" }}>
+                  <div>🤖 Machine: {order.design_details?.machine_brand || "Not specified"}</div>
+                  <div>📁 Format: {order.design_details?.requested_format?.toUpperCase() || "Not specified"}</div>
+                </div>
+              )}
             </div>
           </div>
         )}

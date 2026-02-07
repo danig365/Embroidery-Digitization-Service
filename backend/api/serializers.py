@@ -92,6 +92,8 @@ class DesignSerializer(serializers.ModelSerializer):
             'canvas_width', 'canvas_height', 'design_width', 'design_height',
             'hoop_size', 'rotation', 'mirror_horizontal', 'mirror_vertical',
             'embroidery_size_cm',
+            # Machine Settings
+            'machine_brand', 'requested_format',
             # Metadata
             'status', 'tokens_used', 'created_at', 'updated_at'
         ]

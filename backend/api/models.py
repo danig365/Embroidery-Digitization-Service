@@ -219,6 +219,10 @@ class Design(models.Model):
     mirror_vertical = models.BooleanField(default=False)
     embroidery_size_cm = models.IntegerField(default=10, help_text="Embroidery size in centimeters (5-40 cm)")
     
+    # Machine Settings
+    machine_brand = models.CharField(max_length=100, blank=True, null=True, help_text="Customer's embroidery machine brand")
+    requested_format = models.CharField(max_length=10, blank=True, null=True, help_text="Customer's preferred file format (pes, exp, jef, etc.)")
+    
     # Status and metadata
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
     tokens_used = models.IntegerField(default=0)

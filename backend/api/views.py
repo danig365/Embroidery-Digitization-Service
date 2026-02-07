@@ -322,6 +322,9 @@ def generate_ai_image(request):
     try:
         design_id = request.data.get("design_id")
         prompt = request.data.get("prompt")
+        machine_brand = request.data.get("machine_brand", "Brother")
+        requested_format = request.data.get("requested_format", "pes")
+        embroidery_size_cm = request.data.get("embroidery_size_cm", 10)
         
         if not prompt:
             return Response(
@@ -359,12 +362,16 @@ def generate_ai_image(request):
                 user=request.user,
                 name=request.data.get("name", "AI Generated Design"),
                 prompt=prompt,
+                machine_brand=machine_brand,
+                requested_format=requested_format,
+                embroidery_size_cm=embroidery_size_cm,
                 status='draft'
             )
         
-        # Generate AI image (normal style only)
+        # Generate AI image (embroidery style directly)
         openai_service = OpenAIService()
-        result = openai_service.generate_image(prompt, quality="high")
+        embroidery_prompt = f"{prompt}, embroidery style, textile art, stitched design, thread work"
+        result = openai_service.generate_image(embroidery_prompt, quality="high")
         
         if not result['success']:
             if not design_id:
@@ -374,44 +381,24 @@ def generate_ai_image(request):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
         
-        # Save normal image
-        normal_filename = f"normal_{uuid.uuid4()}.png"
-        normal_path = os.path.join(settings.MEDIA_ROOT, "designs/normal", normal_filename)
-        os.makedirs(os.path.dirname(normal_path), exist_ok=True)
+        # Save embroidery preview (this is the only image generated)
+        embroidery_filename = f"embroidery_{uuid.uuid4()}.png"
+        embroidery_path = os.path.join(settings.MEDIA_ROOT, "designs/embroidery", embroidery_filename)
+        os.makedirs(os.path.dirname(embroidery_path), exist_ok=True)
         
         if result.get('b64_json'):
-            openai_service.save_base64_image(result['b64_json'], normal_path)
+            openai_service.save_base64_image(result['b64_json'], embroidery_path)
         elif result.get('image_url'):
-            openai_service.download_image(result['image_url'], normal_path)
+            openai_service.download_image(result['image_url'], embroidery_path)
         
-        # Update design
-        design.normal_image = f"designs/normal/{normal_filename}"
+        # Update design with only embroidery preview and machine settings
+        design.embroidery_preview = f"designs/embroidery/{embroidery_filename}"
         design.prompt = prompt
+        design.machine_brand = machine_brand
+        design.requested_format = requested_format
+        design.embroidery_size_cm = embroidery_size_cm
         design.tokens_used += tokens_required
         design.save()
-        
-        # Automatically generate embroidery preview
-        print(f"\n🎨 AUTO-GENERATING EMBROIDERY PREVIEW...")
-        openai_service = OpenAIService()
-        embroidery_prompt = f"{prompt}, embroidery style, textile art, stitched design, thread work"
-        emb_result = openai_service.generate_image(embroidery_prompt, quality="high")
-        
-        if emb_result['success']:
-            # Save embroidery preview
-            embroidery_filename = f"embroidery_{uuid.uuid4()}.png"
-            embroidery_path = os.path.join(settings.MEDIA_ROOT, "designs/embroidery", embroidery_filename)
-            os.makedirs(os.path.dirname(embroidery_path), exist_ok=True)
-            
-            if emb_result.get('b64_json'):
-                openai_service.save_base64_image(emb_result['b64_json'], embroidery_path)
-            elif emb_result.get('image_url'):
-                openai_service.download_image(emb_result['image_url'], embroidery_path)
-            
-            design.embroidery_preview = f"designs/embroidery/{embroidery_filename}"
-            design.save()
-            print(f"   ✅ Embroidery preview generated")
-        else:
-            print(f"   ⚠️ Embroidery preview generation failed: {emb_result.get('error')}")
         
         # Deduct tokens
         profile.deduct_tokens(tokens_required)

@@ -516,6 +516,13 @@ function AdminDashboardContent({ onChatClick }) {
                             <p style={{ fontSize: "10px", color: "#6b7280" }}>
                               {order.design_details?.prompt?.substring(0, 30)}{order.design_details?.prompt?.length > 30 ? "..." : ""}
                             </p>
+                            {(order.design_details?.machine_brand || order.design_details?.requested_format) && (
+                              <p style={{ fontSize: "9px", color: "#9ca3af", marginTop: "2px" }}>
+                                {order.design_details?.machine_brand && `🤖 ${order.design_details.machine_brand}`}
+                                {order.design_details?.machine_brand && order.design_details?.requested_format && " • "}
+                                {order.design_details?.requested_format && `📁 ${order.design_details.requested_format.toUpperCase()}`}
+                              </p>
+                            )}
                           </div>
                         </div>
                       </td>
@@ -776,55 +783,26 @@ function AdminDashboardContent({ onChatClick }) {
                       </p>
                     </div>
                   )}
-                </div>
-              </div>
-
-
-
-              {/* Advanced Settings */}
-              <div style={{ marginBottom: "24px", padding: "16px", background: "#eff6ff", borderRadius: "8px", border: "1px solid #bfdbfe" }}>
-                <h3 style={{ fontSize: "14px", fontWeight: "600", color: "#1e40af", marginBottom: "12px" }}>
-                  ⚙️ Embroidery Settings
-                </h3>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: "12px" }}>
-                  <div>
-                    <p style={{ fontSize: "12px", color: "#1e40af", marginBottom: "4px" }}>Stitch Density</p>
-                    <p style={{ fontSize: "13px", color: "#111827", fontWeight: "500" }}>
-                      Level {selectedOrder.design_details?.stitch_density || 5}
-                    </p>
-                  </div>
-                  {selectedOrder.design_details?.stitch_type && (
+                  {selectedOrder.design_details?.machine_brand && (
                     <div>
-                      <p style={{ fontSize: "12px", color: "#1e40af", marginBottom: "4px" }}>Stitch Type</p>
+                      <p style={{ fontSize: "12px", color: "#6b7280", marginBottom: "4px" }}>Machine Brand</p>
                       <p style={{ fontSize: "13px", color: "#111827", fontWeight: "500" }}>
-                        {selectedOrder.design_details.stitch_type}
+                        🤖 {selectedOrder.design_details.machine_brand}
                       </p>
                     </div>
                   )}
-                  <div>
-                    <p style={{ fontSize: "12px", color: "#1e40af", marginBottom: "4px" }}>Auto Trim</p>
-                    <p style={{ fontSize: "13px", color: "#111827", fontWeight: "500" }}>
-                      {selectedOrder.design_details?.auto_trim ? "✓ Enabled" : "✗ Disabled"}
-                    </p>
-                  </div>
-                  {selectedOrder.design_details?.underlay !== undefined && (
+                  {selectedOrder.design_details?.requested_format && (
                     <div>
-                      <p style={{ fontSize: "12px", color: "#1e40af", marginBottom: "4px" }}>Underlay</p>
+                      <p style={{ fontSize: "12px", color: "#6b7280", marginBottom: "4px" }}>Requested Format</p>
                       <p style={{ fontSize: "13px", color: "#111827", fontWeight: "500" }}>
-                        {selectedOrder.design_details.underlay ? "✓ Yes" : "✗ No"}
-                      </p>
-                    </div>
-                  )}
-                  {selectedOrder.design_details?.jump_trim !== undefined && (
-                    <div>
-                      <p style={{ fontSize: "12px", color: "#1e40af", marginBottom: "4px" }}>Jump Trim</p>
-                      <p style={{ fontSize: "13px", color: "#111827", fontWeight: "500" }}>
-                        {selectedOrder.design_details.jump_trim ? "✓ Yes" : "✗ No"}
+                        📁 {selectedOrder.design_details.requested_format.toUpperCase()}
                       </p>
                     </div>
                   )}
                 </div>
               </div>
+
+
 
               {/* Canvas/Design Settings */}
               <div style={{ marginBottom: "24px", padding: "16px", background: "#f0fdf4", borderRadius: "8px", border: "1px solid #86efac" }}>
