@@ -31,7 +31,6 @@ urlpatterns = [
     
     # Design Management (NEW)
     path("designs/create/", views.create_design, name="create_design"),
-    path("designs/upload/", views.upload_design, name="upload_design"),
     path("designs/generate-ai-image/", views.generate_ai_image, name="generate_ai_image"),
     path("designs/generate-embroidery-preview/", views.generate_embroidery_preview_new, name="generate_embroidery_preview_new"),
     path("designs/list/", views.list_designs, name="list_designs_alias"),
@@ -82,6 +81,11 @@ urlpatterns = [
     path("admin/token-costs/", views.manage_token_costs, name="manage_token_costs"),
     path("admin/embroidery-size-pricing/", views.manage_embroidery_size_pricing, name="manage_embroidery_size_pricing"),
     path("admin/embroidery-size-pricing/<int:tier_id>/", views.manage_embroidery_size_pricing_detail, name="manage_embroidery_size_pricing_detail"),
+    
+    # Chat System
+    path("chat/conversations/", views.conversation_list, name="conversation_list"),
+    path("chat/conversations/<int:conversation_id>/", views.conversation_detail, name="conversation_detail"),
+    path("chat/unread-count/", views.unread_messages_count, name="unread_messages_count"),
     
     # Health
     path("health/", views.health_check, name="health_check"),

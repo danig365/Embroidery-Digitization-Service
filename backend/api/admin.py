@@ -2,7 +2,8 @@ from django.contrib import admin
 from .models import (
     UserProfile, TokenPackage, TokenTransaction, 
     Design, Order, Cart,
-    EmailVerificationToken, PasswordResetToken
+    EmailVerificationToken, PasswordResetToken,
+    Conversation, Message
 )
 
 @admin.register(UserProfile)
@@ -70,3 +71,19 @@ class PasswordResetTokenAdmin(admin.ModelAdmin):
     list_display = ['user', 'is_used', 'expires_at', 'created_at']
     list_filter = ['is_used']
     search_fields = ['user__username', 'user__email']
+
+
+@admin.register(Conversation)
+class ConversationAdmin(admin.ModelAdmin):
+    list_display = ['order', 'customer', 'admin', 'updated_at']
+    list_filter = ['created_at', 'updated_at']
+    search_fields = ['customer__username', 'admin__username', 'order__order_number']
+    readonly_fields = ['created_at', 'updated_at']
+
+
+@admin.register(Message)
+class MessageAdmin(admin.ModelAdmin):
+    list_display = ['sender', 'conversation', 'is_read', 'created_at']
+    list_filter = ['is_read', 'created_at']
+    search_fields = ['sender__username', 'content', 'conversation__order__order_number']
+    readonly_fields = ['created_at', 'read_at']

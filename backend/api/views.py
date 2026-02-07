@@ -11,6 +11,9 @@ from django.utils import timezone
 import os
 import uuid
 import stripe
+import logging
+
+logger = logging.getLogger(__name__)
 
 from .models import (
     UserProfile,
@@ -24,6 +27,8 @@ from .models import (
     EmailVerificationToken,
     PasswordResetToken,
     TokenCostSettings,
+    Conversation,
+    Message,
 )
 from .serializers import (
     UserSerializer,
@@ -37,6 +42,9 @@ from .serializers import (
     DesignFeatureUsageSerializer,
     ForgotPasswordSerializer,
     ResetPasswordSerializer,
+    ConversationSerializer,
+    ConversationListSerializer,
+    MessageSerializer,
 )
 from .utils.openai_service import OpenAIService
 
@@ -306,246 +314,6 @@ def create_design(request):
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
-def upload_design(request):
-    """
-    Upload image design (no AI generation, no token cost)
-    Saves ALL design specifications
-    """
-    try:
-        import json
-        
-        print(f"\n{'='*80}")
-        print(f"🖼️  UPLOAD DESIGN - START")
-        print(f"{'='*80}")
-        print(f"📋 Request Method: {request.method}")
-        print(f"📋 User: {request.user.username}")
-        
-        uploaded_image = request.FILES.get("uploaded_image")
-        print(f"📁 Uploaded Image: {uploaded_image}")
-        print(f"📁 Image Name: {uploaded_image.name if uploaded_image else 'NONE'}")
-        print(f"📁 Image Size: {uploaded_image.size if uploaded_image else 'NONE'} bytes")
-        
-        if not uploaded_image:
-            print(f"❌ NO IMAGE PROVIDED")
-            return Response(
-                {"error": "No image file provided"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        # Validate file size (10MB max)
-        max_size = 10 * 1024 * 1024  # 10MB in bytes
-        if uploaded_image.size > max_size:
-            print(f"❌ FILE TOO LARGE: {uploaded_image.size} > {max_size}")
-            return Response(
-                {"error": "File size exceeds 10MB limit"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        # Validate file type
-        allowed_types = ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml']
-        print(f"🔍 Content Type: {uploaded_image.content_type}")
-        if uploaded_image.content_type not in allowed_types:
-            print(f"❌ INVALID FILE TYPE: {uploaded_image.content_type}")
-            return Response(
-                {"error": "Invalid file type. Only PNG, JPG, and SVG allowed."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        # Basic Design Details
-        name = request.data.get("name", "Untitled Design")
-        print(f"\n📝 DESIGN NAME: {name}")
-        
-        # TEXT LAYER - FULL DETAILS
-        text_content = request.data.get("text_content", "")
-        text_font = request.data.get("text_font", "Arial")
-        text_style = request.data.get("text_style", "Regular")
-        text_size = request.data.get("text_size", 36)
-        text_color = request.data.get("text_color", "#000000")
-        text_outline_color = request.data.get("text_outline_color", "#FFFFFF")
-        text_outline_thickness = request.data.get("text_outline_thickness", 2)
-        text_position_x = request.data.get("text_position_x", 50)
-        text_position_y = request.data.get("text_position_y", 50)
-        
-        print(f"\n📝 TEXT LAYER:")
-        print(f"   Content: '{text_content}'")
-        print(f"   Font: {text_font}, Style: {text_style}, Size: {text_size}px")
-        print(f"   Color: {text_color}, Outline: {text_outline_color} ({text_outline_thickness}px)")
-        print(f"   Position: X={text_position_x}%, Y={text_position_y}%")
-        
-        # THREAD COLORS - FULL DETAILS
-        thread_colors_str = request.data.get("thread_colors", "[]")
-        try:
-            thread_colors = json.loads(thread_colors_str) if isinstance(thread_colors_str, str) else thread_colors_str
-        except:
-            thread_colors = []
-        thread_brand = request.data.get("thread_brand", "Madeira")
-        thread_notes = request.data.get("thread_notes", "")
-        
-        print(f"\n🧵 THREAD COLORS:")
-        print(f"   Brand: {thread_brand}")
-        print(f"   Colors Count: {len(thread_colors)}")
-        print(f"   Notes: '{thread_notes}'")
-        
-        # EMBROIDERY SETTINGS - FULL DETAILS
-        stitch_density = request.data.get("stitch_density", 5)
-        stitch_type = request.data.get("stitch_type", "Satin")
-        # Handle booleans - can be boolean or string depending on source
-        auto_trim_val = request.data.get("auto_trim", "true")
-        auto_trim = auto_trim_val if isinstance(auto_trim_val, bool) else (str(auto_trim_val).lower() == "true")
-        underlay_val = request.data.get("underlay", "true")
-        underlay = underlay_val if isinstance(underlay_val, bool) else (str(underlay_val).lower() == "true")
-        jump_trim_val = request.data.get("jump_trim", "true")
-        jump_trim = jump_trim_val if isinstance(jump_trim_val, bool) else (str(jump_trim_val).lower() == "true")
-        
-        print(f"\n⚙️  EMBROIDERY SETTINGS:")
-        print(f"   Stitch Density: {stitch_density}, Type: {stitch_type}")
-        print(f"   Auto Trim: {auto_trim}, Underlay: {underlay}, Jump Trim: {jump_trim}")
-        
-        # CANVAS/DESIGN SETTINGS - FULL DETAILS
-        canvas_width = request.data.get("canvas_width", 1200)
-        canvas_height = request.data.get("canvas_height", 1200)
-        design_width = request.data.get("design_width", 100)
-        design_height = request.data.get("design_height", 100)
-        hoop_size = request.data.get("hoop_size", "100x100mm")
-        rotation = request.data.get("rotation", 0)
-        # Handle mirror booleans
-        mirror_h_val = request.data.get("mirror_horizontal", "false")
-        mirror_horizontal = mirror_h_val if isinstance(mirror_h_val, bool) else (str(mirror_h_val).lower() == "true")
-        mirror_v_val = request.data.get("mirror_vertical", "false")
-        mirror_vertical = mirror_v_val if isinstance(mirror_v_val, bool) else (str(mirror_v_val).lower() == "true")
-        
-        print(f"\n📐 CANVAS SETTINGS:")
-        print(f"   Design: {design_width}x{design_height}mm, Hoop: {hoop_size}")
-        print(f"   Rotation: {rotation}°, Mirror H: {mirror_horizontal}, Mirror V: {mirror_vertical}")
-        
-        print(f"\n💾 CREATING DESIGN OBJECT...")
-        # Create design with ALL fields
-        design = Design.objects.create(
-            user=request.user,
-            name=name,
-            uploaded_image=uploaded_image,
-            # Text layer
-            text_content=text_content,
-            text_font=text_font,
-            text_style=text_style,
-            text_size=int(text_size),
-            text_color=text_color,
-            text_outline_color=text_outline_color,
-            text_outline_thickness=int(text_outline_thickness),
-            text_position_x=int(text_position_x),
-            text_position_y=int(text_position_y),
-            # Thread colors
-            thread_colors=thread_colors,
-            thread_brand=thread_brand,
-            thread_notes=thread_notes,
-            # Embroidery settings
-            stitch_density=int(stitch_density),
-            stitch_type=stitch_type,
-            auto_trim=auto_trim,
-            underlay=underlay,
-            jump_trim=jump_trim,
-            # Canvas settings
-            canvas_width=int(canvas_width),
-            canvas_height=int(canvas_height),
-            design_width=int(design_width),
-            design_height=int(design_height),
-            hoop_size=hoop_size,
-            rotation=int(rotation),
-            mirror_horizontal=mirror_horizontal,
-            mirror_vertical=mirror_vertical,
-            status='ready',  # Uploaded images are ready immediately - no preview needed
-            tokens_used=0
-        )
-        print(f"✅ Design Created - ID: {design.id}")
-        print(f"   uploaded_image: {design.uploaded_image}")
-        print(f"   normal_image: {design.normal_image}")
-        
-        # Process image with text overlay if text content provided
-        if text_content.strip():
-            print(f"\n🎨 TEXT OVERLAY PROCESSING...")
-            try:
-                from .utils.image_processor import ImageProcessor
-                
-                # Load uploaded image
-                uploaded_image_path = design.uploaded_image.path
-                print(f"   Loading from: {uploaded_image_path}")
-                processor = ImageProcessor()
-                img = processor.load_image(uploaded_image_path)
-                print(f"   ✅ Image Loaded: {img.size}")
-                
-                # Add text overlay
-                print(f"   Adding text overlay...")
-                img_with_text = processor.add_text_overlay(
-                    img,
-                    text_content=text_content,
-                    text_font=text_font,
-                    text_style=text_style,
-                    text_size=int(text_size),
-                    text_color=text_color,
-                    text_outline_color=text_outline_color,
-                    text_outline_thickness=int(text_outline_thickness),
-                    text_position_x=int(text_position_x),
-                    text_position_y=int(text_position_y)
-                )
-                print(f"   ✅ Text Overlay Applied")
-                
-                # Save as normal_image
-                normal_filename = f"normal_{uuid.uuid4()}.png"
-                normal_path = os.path.join(settings.MEDIA_ROOT, "designs/normal", normal_filename)
-                os.makedirs(os.path.dirname(normal_path), exist_ok=True)
-                img_with_text.save(normal_path, "PNG")
-                print(f"   ✅ Saved to: designs/normal/{normal_filename}")
-                
-                # Update design with normal_image
-                design.normal_image = f"designs/normal/{normal_filename}"
-                design.save()
-                print(f"   ✅ Design updated with normal_image")
-                
-            except Exception as e:
-                print(f"   ❌ Error processing text on image: {str(e)}")
-                import traceback
-                traceback.print_exc()
-                # Continue without text overlay
-        else:
-            print(f"\n📸 NO TEXT - USING UPLOADED IMAGE AS NORMAL_IMAGE")
-            # No text overlay - just use the uploaded image as normal_image
-            design.normal_image = design.uploaded_image
-            # For uploaded images, embroidery_preview is same as normal_image
-            design.embroidery_preview = design.uploaded_image
-            design.save()
-            print(f"   ✅ normal_image set to: {design.normal_image}")
-            print(f"   ✅ embroidery_preview set to: {design.embroidery_preview}")
-        
-        print(f"\n📤 SERIALIZING RESPONSE...")
-        serialized = DesignSerializer(design, context={'request': request}).data
-        print(f"   ✅ Serialized successfully")
-        print(f"   Design ID: {serialized.get('id')}")
-        print(f"   Normal Image URL: {serialized.get('normal_image')}")
-        print(f"   Text Content: {serialized.get('text_content')}")
-        print(f"   Thread Notes: {serialized.get('thread_notes')}")
-        
-        print(f"\n✅ UPLOAD DESIGN - COMPLETE")
-        print(f"{'='*80}\n")
-        
-        return Response({
-            "success": True,
-            "message": "Design uploaded successfully",
-            "design": serialized
-        }, status=status.HTTP_201_CREATED)
-        
-    except Exception as e:
-        print(f"\n❌ ERROR IN UPLOAD_DESIGN:")
-        import traceback
-        traceback.print_exc()
-        print(f"{'='*80}\n")
-        return Response(
-            {"error": str(e)},
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
-        )
-
-
-@api_view(["POST"])
-@permission_classes([IsAuthenticated])
 def generate_ai_image(request):
     """
     Generate AI image using OpenAI DALL-E 3
@@ -554,20 +322,10 @@ def generate_ai_image(request):
     try:
         design_id = request.data.get("design_id")
         prompt = request.data.get("prompt")
-        style = request.data.get("style", "")
-        size = request.data.get("size", "1024x1024")
         
         if not prompt:
             return Response(
                 {"error": "Prompt is required"},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        # Validate size
-        valid_sizes = ["256x256", "512x512", "1024x1024"]
-        if size not in valid_sizes:
-            return Response(
-                {"error": f"Invalid size. Must be one of: {', '.join(valid_sizes)}"},
                 status=status.HTTP_400_BAD_REQUEST
             )
         
@@ -601,14 +359,12 @@ def generate_ai_image(request):
                 user=request.user,
                 name=request.data.get("name", "AI Generated Design"),
                 prompt=prompt,
-                style=style,
                 status='draft'
             )
         
         # Generate AI image (normal style only)
         openai_service = OpenAIService()
-        normal_prompt = f"{prompt} {style}" if style else prompt
-        result = openai_service.generate_image(normal_prompt, size=size, quality="high")
+        result = openai_service.generate_image(prompt, quality="high")
         
         if not result['success']:
             if not design_id:
@@ -631,9 +387,31 @@ def generate_ai_image(request):
         # Update design
         design.normal_image = f"designs/normal/{normal_filename}"
         design.prompt = prompt
-        design.style = style
         design.tokens_used += tokens_required
         design.save()
+        
+        # Automatically generate embroidery preview
+        print(f"\n🎨 AUTO-GENERATING EMBROIDERY PREVIEW...")
+        openai_service = OpenAIService()
+        embroidery_prompt = f"{prompt}, embroidery style, textile art, stitched design, thread work"
+        emb_result = openai_service.generate_image(embroidery_prompt, quality="high")
+        
+        if emb_result['success']:
+            # Save embroidery preview
+            embroidery_filename = f"embroidery_{uuid.uuid4()}.png"
+            embroidery_path = os.path.join(settings.MEDIA_ROOT, "designs/embroidery", embroidery_filename)
+            os.makedirs(os.path.dirname(embroidery_path), exist_ok=True)
+            
+            if emb_result.get('b64_json'):
+                openai_service.save_base64_image(emb_result['b64_json'], embroidery_path)
+            elif emb_result.get('image_url'):
+                openai_service.download_image(emb_result['image_url'], embroidery_path)
+            
+            design.embroidery_preview = f"designs/embroidery/{embroidery_filename}"
+            design.save()
+            print(f"   ✅ Embroidery preview generated")
+        else:
+            print(f"   ⚠️ Embroidery preview generation failed: {emb_result.get('error')}")
         
         # Deduct tokens
         profile.deduct_tokens(tokens_required)
@@ -1551,8 +1329,9 @@ def send_order_submitted_email(order):
     """Send email notification when order is submitted"""
     from django.core.mail import send_mail
     
-    subject = f"Order Submitted - {order.order_number}"
-    message = f"""
+    try:
+        subject = f"Order Submitted - {order.order_number}"
+        message = f"""
 Hello {order.user.username},
 
 Your embroidery digitization order has been submitted successfully!
@@ -1565,19 +1344,23 @@ We'll notify you when your order is complete and ready for download.
 
 Best regards,
 Embroidery AI Team
-    """
-    
-    send_mail(
-        subject,
-        message,
-        settings.DEFAULT_FROM_EMAIL,
-        [order.user.email],
-        fail_silently=True,
-    )
-    
-    order.email_sent = True
-    order.notification_sent_at = timezone.now()
-    order.save()
+        """
+        
+        send_mail(
+            subject,
+            message,
+            settings.DEFAULT_FROM_EMAIL,
+            [order.user.email],
+            fail_silently=False,  # Raise exceptions to catch errors
+        )
+        
+        order.email_sent = True
+        order.notification_sent_at = timezone.now()
+        order.save()
+        logger.info(f"✅ Order submitted email sent to {order.user.email} (Order #{order.order_number})")
+    except Exception as e:
+        logger.error(f"❌ Failed to send order submitted email: {str(e)}")
+        raise  # Re-raise to propagate error
 
 
 # ============================================================================
@@ -2732,8 +2515,8 @@ def admin_update_status(request, order_id):
             # Send processing email
             try:
                 send_order_processing_email(order)
-            except:
-                pass  # Don't fail if email fails
+            except Exception as e:
+                logger.warning(f"Email notification failed for order {order.id}, but order status will still be updated: {str(e)}")
         
         elif new_status == 'completed':
             # Ensure all REQUESTED files are uploaded
@@ -2761,22 +2544,27 @@ def admin_update_status(request, order_id):
             # Send completion email
             try:
                 send_order_completed_email(order)
-            except:
-                pass  # Don't fail if email fails
+            except Exception as e:
+                logger.warning(f"Email notification failed for order {order.id}, but order status will still be updated: {str(e)}")
         
         elif new_status == 'failed':
             # Send failure email with admin notes
             try:
                 send_order_failed_email(order, admin_notes)
-            except:
-                pass  # Don't fail if email fails
+            except Exception as e:
+                logger.warning(f"Email notification failed for order {order.id}, but order status will still be updated: {str(e)}")
         
         order.status = new_status
+        
+        # Reset email flag for new status so next transition will send email
+        if new_status in ['processing', 'completed', 'failed']:
+            order.email_sent = False
         
         if admin_notes:
             order.admin_notes = admin_notes
         
         order.save()
+        logger.info(f"✅ Order {order.order_number} status updated to '{new_status}'")
         
         return Response({
             "success": True,
@@ -2795,8 +2583,9 @@ def send_order_completed_email(order):
     """Send email notification when order is completed"""
     from django.core.mail import send_mail
     
-    subject = f"Order Completed - {order.order_number}"
-    message = f"""
+    try:
+        subject = f"Order Completed - {order.order_number}"
+        message = f"""
 Hello {order.user.username},
 
 Great news! Your embroidery digitization order is now complete!
@@ -2816,19 +2605,23 @@ Login to your account to download your files: {settings.FRONTEND_URL}/orders
 
 Best regards,
 Embroidery AI Team
-    """
-    
-    send_mail(
-        subject,
-        message,
-        settings.DEFAULT_FROM_EMAIL,
-        [order.user.email],
-        fail_silently=True,
-    )
-    
-    order.email_sent = True
-    order.notification_sent_at = timezone.now()
-    order.save()
+        """
+        
+        send_mail(
+            subject,
+            message,
+            settings.DEFAULT_FROM_EMAIL,
+            [order.user.email],
+            fail_silently=False,  # Raise exceptions to catch errors
+        )
+        
+        order.email_sent = True
+        order.notification_sent_at = timezone.now()
+        order.save()
+        logger.info(f"✅ Order completed email sent to {order.user.email} (Order #{order.order_number})")
+    except Exception as e:
+        logger.error(f"❌ Failed to send order completed email: {str(e)}")
+        raise  # Re-raise to propagate error
 
 
 def send_token_purchase_email(user, package, amount_paid):
@@ -2878,8 +2671,9 @@ def send_order_processing_email(order):
     """Send email notification when order starts processing"""
     from django.core.mail import send_mail
     
-    subject = f"Order Processing - {order.order_number}"
-    message = f"""
+    try:
+        subject = f"Order Processing - {order.order_number}"
+        message = f"""
 Hello {order.user.username},
 
 Great! Your embroidery digitization order has been received and is now being processed by our team.
@@ -2896,30 +2690,32 @@ If you have any questions, please contact our support team.
 
 Best regards,
 Embroidery AI Team
-    """
-    
-    try:
+        """
+        
         send_mail(
             subject,
             message,
             settings.DEFAULT_FROM_EMAIL,
             [order.user.email],
-            fail_silently=True,
+            fail_silently=False,  # Raise exceptions to catch errors
         )
         
         order.email_sent = True
         order.notification_sent_at = timezone.now()
         order.save()
+        logger.info(f"✅ Order processing email sent to {order.user.email} (Order #{order.order_number})")
     except Exception as e:
-        print(f"⚠️ Failed to send order processing email: {str(e)}")
+        logger.error(f"❌ Failed to send order processing email: {str(e)}")
+        raise  # Re-raise to propagate error
 
 
 def send_order_failed_email(order, admin_notes=None):
     """Send email notification when order fails"""
     from django.core.mail import send_mail
     
-    subject = f"Order Failed - {order.order_number}"
-    message = f"""
+    try:
+        subject = f"Order Failed - {order.order_number}"
+        message = f"""
 Hello {order.user.username},
 
 Unfortunately, we were unable to complete your embroidery digitization order.
@@ -2929,14 +2725,14 @@ Design: {order.design.name}
 Status: Failed
 
 """
-    
-    if admin_notes:
-        message += f"""Reason:
+        
+        if admin_notes:
+            message += f"""Reason:
 {admin_notes}
 
 """
-    
-    message += f"""
+        
+        message += f"""
 What's Next:
 1. Review the reason provided above
 2. You can resubmit your order with a modified design if needed
@@ -2949,22 +2745,23 @@ Login to your account: {settings.FRONTEND_URL}/
 
 Best regards,
 Embroidery AI Team
-    """
-    
-    try:
+        """
+        
         send_mail(
             subject,
             message,
             settings.DEFAULT_FROM_EMAIL,
             [order.user.email],
-            fail_silently=True,
+            fail_silently=False,  # Raise exceptions to catch errors
         )
         
         order.email_sent = True
         order.notification_sent_at = timezone.now()
         order.save()
+        logger.info(f"✅ Order failed email sent to {order.user.email} (Order #{order.order_number})")
     except Exception as e:
-        print(f"⚠️ Failed to send order failed email: {str(e)}")
+        logger.error(f"❌ Failed to send order failed email: {str(e)}")
+        raise  # Re-raise to propagate error
 
 
 # ============================================================
@@ -3400,3 +3197,188 @@ def manage_embroidery_size_pricing_detail(request, tier_id):
             "success": True,
             "message": "Pricing tier deleted successfully"
         })
+
+
+# ============================================================================
+# CHAT SYSTEM
+# ============================================================================
+
+@api_view(["GET", "POST"])
+@permission_classes([IsAuthenticated])
+def conversation_list(request):
+    """
+    GET: List all conversations for current user (customer or admin)
+    POST: Create a new conversation for an order
+    """
+    try:
+        if request.method == "GET":
+            # Get all conversations for this user
+            if request.user.is_staff:
+                # Admins see all conversations
+                conversations = Conversation.objects.all()
+            else:
+                # Customers see only their conversations
+                conversations = Conversation.objects.filter(customer=request.user)
+            
+            serializer = ConversationListSerializer(conversations, many=True, context={'request': request})
+            return Response({
+                "success": True,
+                "conversations": serializer.data,
+                "count": conversations.count()
+            })
+        
+        elif request.method == "POST":
+            # Create conversation for an order
+            order_id = request.data.get("order_id")
+            
+            if not order_id:
+                return Response(
+                    {"error": "order_id is required"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            try:
+                order = Order.objects.get(id=order_id)
+            except Order.DoesNotExist:
+                return Response(
+                    {"error": "Order not found"},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            
+            # Only customer or admin can create conversation
+            if request.user != order.user and not request.user.is_staff:
+                return Response(
+                    {"error": "Not authorized"},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            
+            # Check if conversation already exists
+            conversation, created = Conversation.objects.get_or_create(
+                order=order,
+                defaults={
+                    'customer': order.user,
+                    'admin': None
+                }
+            )
+            
+            serializer = ConversationSerializer(conversation)
+            return Response({
+                "success": True,
+                "message": "Conversation created" if created else "Conversation already exists",
+                "conversation": serializer.data
+            }, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
+    
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return Response(
+            {"error": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(["GET", "POST"])
+@permission_classes([IsAuthenticated])
+def conversation_detail(request, conversation_id):
+    """
+    GET: Get conversation details with all messages
+    POST: Send a new message in the conversation
+    """
+    try:
+        try:
+            conversation = Conversation.objects.get(id=conversation_id)
+        except Conversation.DoesNotExist:
+            return Response(
+                {"error": "Conversation not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Check authorization
+        if request.user != conversation.customer and not request.user.is_staff:
+            return Response(
+                {"error": "Not authorized"},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        if request.method == "GET":
+            # Mark all messages as read for current user
+            unread_messages = conversation.messages.filter(is_read=False).exclude(sender=request.user)
+            for message in unread_messages:
+                message.mark_as_read()
+            
+            serializer = ConversationSerializer(conversation)
+            return Response({
+                "success": True,
+                "conversation": serializer.data
+            })
+        
+        elif request.method == "POST":
+            # Send a message
+            content = request.data.get("message", "").strip()
+            
+            if not content:
+                return Response(
+                    {"error": "Message cannot be empty"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # If admin is replying, assign them to the conversation
+            if request.user.is_staff and not conversation.admin:
+                conversation.admin = request.user
+                conversation.save()
+            
+            # Create message
+            message = Message.objects.create(
+                conversation=conversation,
+                sender=request.user,
+                content=content
+            )
+            
+            # Update conversation updated_at
+            conversation.updated_at = timezone.now()
+            conversation.save()
+            
+            serializer = MessageSerializer(message)
+            return Response({
+                "success": True,
+                "message": "Message sent",
+                "data": serializer.data
+            }, status=status.HTTP_201_CREATED)
+    
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return Response(
+            {"error": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def unread_messages_count(request):
+    """Get count of unread messages for current user"""
+    try:
+        if request.user.is_staff:
+            # Admin sees all unread messages in their conversations
+            unread = Message.objects.filter(
+                conversation__admin=request.user,
+                is_read=False
+            ).exclude(sender=request.user).count()
+        else:
+            # Customer sees unread messages in their conversations
+            unread = Message.objects.filter(
+                conversation__customer=request.user,
+                is_read=False
+            ).exclude(sender=request.user).count()
+        
+        return Response({
+            "success": True,
+            "unread_count": unread
+        })
+    
+    except Exception as e:
+        return Response(
+            {"error": str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )

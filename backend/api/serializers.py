@@ -3,7 +3,7 @@ from django.contrib.auth.models import User
 from .models import (
     UserProfile, TokenPackage, TokenTransaction, 
     Design, Order, Cart, DesignFeature, DesignFeatureUsage,
-    EmailVerificationToken, PasswordResetToken
+    EmailVerificationToken, PasswordResetToken, Conversation, Message
 )
 
 class UserSerializer(serializers.ModelSerializer):
@@ -86,12 +86,6 @@ class DesignSerializer(serializers.ModelSerializer):
             'uploaded_image', 'normal_image', 'embroidery_preview',
             # AI Generation
             'prompt', 'style', 
-            # Text Layer - FULL DETAILS
-            'text_content', 'text_font', 'text_style', 'text_size',
-            'text_color', 'text_outline_color', 'text_outline_thickness',
-            'text_position_x', 'text_position_y',
-            # Thread Colors - FULL DETAILS
-            'thread_colors', 'thread_brand', 'thread_notes',
             # Embroidery Settings - FULL DETAILS
             'stitch_density', 'stitch_type', 'auto_trim', 'underlay', 'jump_trim',
             # Canvas Settings
@@ -238,3 +232,74 @@ class EmbroiderySizePricingSerializer(serializers.ModelSerializer):
         model = EmbroiderySizePricing
         fields = ['id', 'size_cm', 'price_in_tokens', 'created_at', 'updated_at']
         read_only_fields = ['created_at', 'updated_at']
+
+# ============================================================================
+# CHAT SERIALIZERS
+# ============================================================================
+
+class MessageSerializer(serializers.ModelSerializer):
+    """Serializer for individual messages"""
+    sender_username = serializers.CharField(source='sender.username', read_only=True)
+    sender_id = serializers.IntegerField(source='sender.id', read_only=True)
+    is_admin = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Message
+        fields = ['id', 'sender', 'sender_id', 'sender_username', 'is_admin', 'content', 'created_at', 'is_read', 'read_at']
+        read_only_fields = ['id', 'created_at', 'is_read', 'read_at']
+    
+    def get_is_admin(self, obj):
+        """Check if sender is an admin/staff member"""
+        return obj.sender.is_staff
+
+
+class ConversationSerializer(serializers.ModelSerializer):
+    """Serializer for conversations with nested messages"""
+    customer_username = serializers.CharField(source='customer.username', read_only=True)
+    admin_username = serializers.CharField(source='admin.username', read_only=True, allow_null=True)
+    order_number = serializers.CharField(source='order.order_number', read_only=True)
+    messages = MessageSerializer(many=True, read_only=True)
+    unread_count = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Conversation
+        fields = ['id', 'order', 'order_number', 'customer', 'customer_username', 'admin', 'admin_username', 'messages', 'unread_count', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'order', 'customer', 'created_at', 'updated_at']
+    
+    def get_unread_count(self, obj):
+        """Count unread messages"""
+        return obj.messages.filter(is_read=False).count()
+
+
+class ConversationListSerializer(serializers.ModelSerializer):
+    """Simplified serializer for conversation lists"""
+    customer_username = serializers.CharField(source='customer.username', read_only=True)
+    admin_username = serializers.CharField(source='admin.username', read_only=True, allow_null=True)
+    order_number = serializers.CharField(source='order.order_number', read_only=True)
+    order_status = serializers.CharField(source='order.status', read_only=True)
+    last_message = serializers.SerializerMethodField()
+    unread_count = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Conversation
+        fields = ['id', 'order', 'order_number', 'order_status', 'customer', 'customer_username', 'admin', 'admin_username', 'last_message', 'unread_count', 'updated_at']
+        read_only_fields = ['id', 'order', 'customer', 'updated_at']
+    
+    def get_last_message(self, obj):
+        """Get the last message in the conversation"""
+        last_msg = obj.messages.last()
+        if last_msg:
+            return {
+                'id': last_msg.id,
+                'sender_username': last_msg.sender.username,
+                'content': last_msg.content[:100],  # First 100 chars
+                'created_at': last_msg.created_at
+            }
+        return None
+    
+    def get_unread_count(self, obj):
+        """Count unread messages for current user"""
+        request = self.context.get('request')
+        if request and request.user:
+            return obj.messages.filter(is_read=False).exclude(sender=request.user).count()
+        return 0

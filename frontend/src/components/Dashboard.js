@@ -24,6 +24,7 @@ import OrdersContent from "./content/OrdersContent";
 import BuyTokensContent from "./content/BuyTokensContent";
 import SettingsContent from "./content/SettingsContent";
 import AdminDashboardContent from "./content/AdminDashboardContent";
+import ChatContent from "./content/ChatContent";
 
 function Dashboard() {
   const navigate = useNavigate();
@@ -92,6 +93,11 @@ function Dashboard() {
     setSidebarOpen(false);
   };
 
+  const handleChatClick = async (orderId) => {
+    // Navigate to chat view with order context
+    setActiveView("chat");
+  };
+
   const renderContent = () => {
     switch (activeView) {
       case "new-design":
@@ -101,13 +107,15 @@ function Dashboard() {
       case "cart":
         return <CartContent onTokenUpdate={loadTokenBalance} onCheckout={() => { setActiveView("orders"); setOrderRefresh(prev => prev + 1); }} />;
       case "orders":
-        return <OrdersContent onRefresh={orderRefresh} />;
+        return <OrdersContent onRefresh={orderRefresh} onChatClick={handleChatClick} />;
       case "buy-tokens":
         return <BuyTokensContent onPurchase={loadTokenBalance} />;
       case "settings":
         return <SettingsContent isAdmin={isAdmin} />;
+      case "chat":
+        return <ChatContent userRole={isAdmin ? "admin" : "customer"} />;
       case "admin":
-        return isAdmin ? <AdminDashboardContent /> : <NewDesignContent onTokenUpdate={loadTokenBalance} />;
+        return isAdmin ? <AdminDashboardContent onChatClick={handleChatClick} /> : <NewDesignContent onTokenUpdate={loadTokenBalance} />;
       default:
         return <NewDesignContent onTokenUpdate={loadTokenBalance} />;
     }
@@ -127,6 +135,8 @@ function Dashboard() {
         return "tokens";
       case "settings":
         return "settings";
+      case "chat":
+        return "messages";
       case "admin":
         return "admin";
       default:
@@ -186,6 +196,12 @@ function Dashboard() {
                 onClick={() => handleNavClick("admin")}
                 isAdmin={true}
               />
+              <NavItem
+                icon={Bell}
+                label="Messages"
+                active={activeView === "chat"}
+                onClick={() => handleNavClick("chat")}
+              />
             </>
           ) : (
             <>
@@ -219,6 +235,12 @@ function Dashboard() {
                 label="Buy Tokens"
                 active={activeView === "buy-tokens"}
                 onClick={() => handleNavClick("buy-tokens")}
+              />
+              <NavItem
+                icon={Bell}
+                label="Messages"
+                active={activeView === "chat"}
+                onClick={() => handleNavClick("chat")}
               />
             </>
           )}

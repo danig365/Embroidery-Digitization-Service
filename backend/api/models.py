@@ -469,3 +469,46 @@ class EmbroiderySizePricing(models.Model):
                 return int(round(interpolated_price))
         
         return max_tier.price_in_tokens
+
+
+# ============================================================================
+# CHAT/MESSAGING
+# ============================================================================
+
+class Conversation(models.Model):
+    """Represents a chat conversation between a customer and admin about an order"""
+    order = models.OneToOneField(Order, on_delete=models.CASCADE, related_name='conversation')
+    customer = models.ForeignKey(User, on_delete=models.CASCADE, related_name='customer_conversations')
+    admin = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='admin_conversations')
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-updated_at']
+    
+    def __str__(self):
+        return f"Chat - Order {self.order.order_number} ({self.customer.username})"
+
+
+class Message(models.Model):
+    """Individual chat message in a conversation"""
+    conversation = models.ForeignKey(Conversation, on_delete=models.CASCADE, related_name='messages')
+    sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent_messages')
+    content = models.TextField()
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_read = models.BooleanField(default=False)
+    read_at = models.DateTimeField(null=True, blank=True)
+    
+    class Meta:
+        ordering = ['created_at']
+    
+    def __str__(self):
+        return f"Message from {self.sender.username} at {self.created_at}"
+    
+    def mark_as_read(self):
+        if not self.is_read:
+            self.is_read = True
+            self.read_at = timezone.now()
+            self.save()

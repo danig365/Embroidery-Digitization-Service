@@ -8,7 +8,8 @@ load_dotenv()
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-default-key')
-DEBUG = os.getenv('DEBUG', 'True') == 'True'
+# DEBUG defaults to False for production safety - set DEBUG=True only in development
+DEBUG = os.getenv('DEBUG', 'False').lower() in ('true', '1', 'yes')
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:3000')
 INSTALLED_APPS = [
@@ -55,12 +56,31 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'studio.wsgi.application'
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+# Database configuration - PostgreSQL for production, SQLite for development
+DB_ENGINE = os.getenv('DB_ENGINE', 'django.db.backends.postgresql')
+
+if DB_ENGINE == 'django.db.backends.postgresql':
+    # Production: PostgreSQL
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.getenv('DB_NAME', 'embroidery_db'),
+            'USER': os.getenv('DB_USER', 'embroidery_user'),
+            'PASSWORD': os.getenv('DB_PASSWORD', ''),
+            'HOST': os.getenv('DB_HOST', 'localhost'),
+            'PORT': os.getenv('DB_PORT', '5432'),
+            'ATOMIC_REQUESTS': True,  # Ensure data consistency
+            'CONN_MAX_AGE': 600,  # Connection pooling
+        }
     }
-}
+else:
+    # Development: SQLite (only if explicitly set)
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
@@ -81,11 +101,32 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# CORS Settings
-CORS_ALLOWED_ORIGINS = [
-    os.getenv('FRONTEND_URL', 'http://localhost:3000'),
-]
+# CORS Settings - Configure allowed frontend origins
+FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:3000')
+ALLOWED_ORIGINS = os.getenv('CORS_ALLOWED_ORIGINS', FRONTEND_URL)
+
+# Parse comma-separated origins or use default
+if isinstance(ALLOWED_ORIGINS, str):
+    CORS_ALLOWED_ORIGINS = [origin.strip() for origin in ALLOWED_ORIGINS.split(',')]
+else:
+    CORS_ALLOWED_ORIGINS = [ALLOWED_ORIGINS]
+
+# Always include localhost for development
+if 'localhost' not in str(CORS_ALLOWED_ORIGINS) and '127.0.0.1' not in str(CORS_ALLOWED_ORIGINS):
+    CORS_ALLOWED_ORIGINS.extend(['http://localhost:3000', 'http://127.0.0.1:3000'])
+
 CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
 
 # REST Framework Settings
 REST_FRAMEWORK = {

@@ -10,10 +10,11 @@ import {
   RefreshCw,
   X,
   Package,
+  MessageCircle,
 } from "lucide-react";
 import './ContentStyles.css';
 
-function OrdersContent() {
+function OrdersContent({ onChatClick }) {
   const [orders, setOrders] = useState([]);
   const [filteredOrders, setFilteredOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -340,12 +341,43 @@ function OrdersContent() {
             alignItems: "center",
             fontSize: "12px",
             color: "#6b7280",
+            gap: "10px"
           }}
         >
-          <span>Tokens Used</span>
-          <span style={{ fontWeight: "600", color: "#667eea", fontSize: "13px" }}>
-            {order.tokens_used || 0} Tokens
-          </span>
+          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+            <span>Tokens Used</span>
+            <span style={{ fontWeight: "600", color: "#667eea", fontSize: "13px" }}>
+              {order.tokens_used || 0} Tokens
+            </span>
+          </div>
+          <button
+            onClick={() => onChatClick && onChatClick(order.id)}
+            style={{
+              padding: "6px 12px",
+              background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+              color: "white",
+              border: "none",
+              borderRadius: "6px",
+              cursor: "pointer",
+              fontSize: "12px",
+              fontWeight: "600",
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              transition: "all 0.2s"
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = "translateY(-1px)";
+              e.currentTarget.style.boxShadow = "0 4px 12px rgba(102, 126, 234, 0.4)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = "translateY(0)";
+              e.currentTarget.style.boxShadow = "none";
+            }}
+          >
+            <MessageCircle size={14} />
+            Chat
+          </button>
         </div>
       </div>
     );

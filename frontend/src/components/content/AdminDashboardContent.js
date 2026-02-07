@@ -13,7 +13,8 @@ import {
   Download,
   User,
   Coins,
-  Sparkles
+  Sparkles,
+  MessageCircle
 } from "lucide-react";
 import { API_BASE_URL } from '../../config';
 import { LoadingOverlay } from '../LoadingSpinner';
@@ -22,7 +23,7 @@ import TokenCostManagementContent from './TokenCostManagementContent';
 import EmbroiderySizePricingContent from './EmbroiderySizePricingContent';
 import './ContentStyles.css';
 
-function AdminDashboardContent() {
+function AdminDashboardContent({ onChatClick }) {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [statusUpdating, setStatusUpdating] = useState(false);
@@ -457,88 +458,113 @@ function AdminDashboardContent() {
               </p>
             </div>
           ) : (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "12px" }}>
-              {filteredOrders.map((order) => (
-                <div key={order.id} style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: "12px", padding: "12px", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}>
-                  {/* Order ID and Status */}
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", marginBottom: "12px" }}>
-                    <div>
-                      <p style={{ fontSize: "13px", fontWeight: "600", color: "#111827", margin: 0 }}>Order #{order.id}</p>
-                      <p style={{ fontSize: "10px", color: "#6b7280", margin: "4px 0 0 0" }}>{formatDate(order.created_at)}</p>
-                    </div>
-                    {getStatusBadge(order.status)}
-                  </div>
-
-                  {/* Design Preview */}
-                  <div style={{ marginBottom: "12px" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                      {order.design_preview ? (
-                        <img
-                          src={order.design_preview}
-                          alt="Design"
-                          style={{ width: "60px", height: "60px", borderRadius: "6px", objectFit: "cover" }}
-                        />
-                      ) : (
-                        <div style={{ 
-                          width: "60px", 
-                          height: "60px", 
-                          background: "#f3f4f6", 
-                          borderRadius: "6px",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center"
-                        }}>
-                          <FileText size={24} color="#9ca3af" />
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead style={{ background: "#f9fafb", borderBottom: "2px solid #e5e7eb" }}>
+                  <tr>
+                    <th style={{ textAlign: "left", padding: "12px 10px", fontSize: "11px", fontWeight: "600", color: "#6b7280" }}>
+                      Order ID
+                    </th>
+                    <th style={{ textAlign: "left", padding: "12px 10px", fontSize: "11px", fontWeight: "600", color: "#6b7280" }}>
+                      Design
+                    </th>
+                    <th style={{ textAlign: "left", padding: "12px 10px", fontSize: "11px", fontWeight: "600", color: "#6b7280" }}>
+                      User
+                    </th>
+                    <th style={{ textAlign: "left", padding: "12px 10px", fontSize: "11px", fontWeight: "600", color: "#6b7280" }}>
+                      Date
+                    </th>
+                    <th style={{ textAlign: "left", padding: "12px 10px", fontSize: "11px", fontWeight: "600", color: "#6b7280" }}>
+                      Status
+                    </th>
+                    <th style={{ textAlign: "right", padding: "12px 10px", fontSize: "11px", fontWeight: "600", color: "#6b7280" }}>
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredOrders.map((order) => (
+                    <tr key={order.id} style={{ borderBottom: "1px solid #f3f4f6" }}>
+                      <td style={{ padding: "12px 10px", fontSize: "11px", fontWeight: "600", color: "#111827" }}>
+                        #{order.id}
+                      </td>
+                      <td style={{ padding: "12px 10px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                          {order.design_preview ? (
+                            <img
+                              src={order.design_preview}
+                              alt="Design"
+                              style={{ width: "50px", height: "50px", borderRadius: "6px", objectFit: "cover" }}
+                            />
+                          ) : (
+                            <div style={{ 
+                              width: "40px", 
+                              height: "40px", 
+                              background: "#f3f4f6", 
+                              borderRadius: "6px",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center"
+                            }}>
+                              <FileText size={18} color="#9ca3af" />
+                            </div>
+                          )}
+                          <div>
+                            <p style={{ fontSize: "11px", fontWeight: "500", color: "#111827", marginBottom: "2px" }}>
+                              {order.design_name || "Untitled Design"}
+                            </p>
+                            <p style={{ fontSize: "10px", color: "#6b7280" }}>
+                              {order.design_details?.prompt?.substring(0, 30)}{order.design_details?.prompt?.length > 30 ? "..." : ""}
+                            </p>
+                          </div>
                         </div>
-                      )}
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <p style={{ fontSize: "12px", fontWeight: "600", color: "#111827", margin: "0 0 4px 0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                          {order.design_name || "Untitled Design"}
-                        </p>
-                        <p style={{ fontSize: "10px", color: "#6b7280", margin: 0, overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
-                          {order.design_details?.prompt || "No description"}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* User Info */}
-                  <div style={{ marginBottom: "12px", padding: "8px", background: "#f9fafb", borderRadius: "6px" }}>
-                    <p style={{ fontSize: "10px", color: "#6b7280", margin: "0 0 4px 0", fontWeight: "600" }}>Customer</p>
-                    <p style={{ fontSize: "11px", color: "#111827", margin: "0 0 2px 0", fontWeight: "500" }}>
-                      {order.user?.first_name || order.user?.email?.split("@")[0]}
-                    </p>
-                    <p style={{ fontSize: "10px", color: "#6b7280", margin: 0, overflow: "hidden", textOverflow: "ellipsis" }}>
-                      {order.user?.email}
-                    </p>
-                  </div>
-
-                  {/* View Details Button */}
-                  <button
-                    onClick={() => {
-                      handleViewOrder(order.id);
-                    }}
-                    style={{
-                      width: "100%",
-                      padding: "10px 12px",
-                      background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                      color: "white",
-                      border: "none",
-                      borderRadius: "6px",
-                      fontSize: "12px",
-                      fontWeight: "600",
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: "6px",
-                    }}
-                  >
-                    <Eye size={14} />
-                    View Details
-                  </button>
-                </div>
-              ))}
+                      </td>
+                      <td style={{ padding: "12px 10px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                          <User size={12} color="#6b7280" />
+                          <div>
+                            <p style={{ fontSize: "11px", color: "#111827", margin: 0 }}>
+                              {order.user?.first_name || order.user?.email?.split("@")[0]}
+                            </p>
+                            <p style={{ fontSize: "10px", color: "#6b7280", margin: 0 }}>
+                              {order.user?.email}
+                            </p>
+                          </div>
+                        </div>
+                      </td>
+                      <td style={{ padding: "12px 10px", fontSize: "10px", color: "#6b7280" }}>
+                        {formatDate(order.created_at)}
+                      </td>
+                      <td style={{ padding: "12px 10px" }}>
+                        {getStatusBadge(order.status)}
+                      </td>
+                      <td style={{ padding: "12px 10px", textAlign: "right" }}>
+                        <button
+                          onClick={() => {
+                            handleViewOrder(order.id);
+                          }}
+                          style={{
+                            padding: "8px 16px",
+                            background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                            color: "white",
+                            border: "none",
+                            borderRadius: "6px",
+                            fontSize: "13px",
+                            fontWeight: "600",
+                            cursor: "pointer",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "6px",
+                          }}
+                        >
+                          <Eye size={14} />
+                          View Details
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </div>
@@ -753,118 +779,7 @@ function AdminDashboardContent() {
                 </div>
               </div>
 
-              {/* Text Layer Details */}
-              {selectedOrder.design_details?.text_content && (
-                <div style={{ marginBottom: "24px", padding: "16px", background: "#fef3c7", borderRadius: "8px", border: "1px solid #fcd34d" }}>
-                  <h3 style={{ fontSize: "14px", fontWeight: "600", color: "#92400e", marginBottom: "12px" }}>
-                    📝 Text Layer Settings
-                  </h3>
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "12px" }}>
-                    <div>
-                      <p style={{ fontSize: "12px", color: "#b45309", marginBottom: "4px" }}>Text Content</p>
-                      <p style={{ fontSize: "13px", color: "#111827", fontWeight: "500", whiteSpace: "pre-wrap", padding: "8px", background: "white", borderRadius: "4px" }}>
-                        "{selectedOrder.design_details.text_content}"
-                      </p>
-                    </div>
-                    <div>
-                      <p style={{ fontSize: "12px", color: "#b45309", marginBottom: "4px" }}>Font Family</p>
-                      <p style={{ fontSize: "13px", color: "#111827", fontWeight: "500" }}>
-                        {selectedOrder.design_details.text_font || "Default"}
-                      </p>
-                    </div>
-                    <div>
-                      <p style={{ fontSize: "12px", color: "#b45309", marginBottom: "4px" }}>Font Style</p>
-                      <p style={{ fontSize: "13px", color: "#111827", fontWeight: "500" }}>
-                        {selectedOrder.design_details.text_style || "Regular"}
-                      </p>
-                    </div>
-                    <div>
-                      <p style={{ fontSize: "12px", color: "#b45309", marginBottom: "4px" }}>Size (px)</p>
-                      <p style={{ fontSize: "13px", color: "#111827", fontWeight: "500" }}>
-                        {selectedOrder.design_details.text_size || "36"}
-                      </p>
-                    </div>
-                    {selectedOrder.design_details.text_color && (
-                      <div>
-                        <p style={{ fontSize: "12px", color: "#b45309", marginBottom: "4px" }}>Text Color</p>
-                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                          <div style={{ width: "32px", height: "32px", background: selectedOrder.design_details.text_color, borderRadius: "4px", border: "2px solid #fcd34d" }} />
-                          <span style={{ fontSize: "13px", color: "#111827", fontWeight: "500" }}>{selectedOrder.design_details.text_color}</span>
-                        </div>
-                      </div>
-                    )}
-                    {selectedOrder.design_details.text_outline_color && (
-                      <div>
-                        <p style={{ fontSize: "12px", color: "#b45309", marginBottom: "4px" }}>Outline Color</p>
-                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                          <div style={{ width: "32px", height: "32px", background: selectedOrder.design_details.text_outline_color, borderRadius: "4px", border: "2px solid #fcd34d" }} />
-                          <span style={{ fontSize: "13px", color: "#111827", fontWeight: "500" }}>{selectedOrder.design_details.text_outline_color}</span>
-                        </div>
-                      </div>
-                    )}
-                    {selectedOrder.design_details?.text_outline_thickness && (
-                      <div>
-                        <p style={{ fontSize: "12px", color: "#b45309", marginBottom: "4px" }}>Outline Thickness</p>
-                        <p style={{ fontSize: "13px", color: "#111827", fontWeight: "500" }}>
-                          {selectedOrder.design_details.text_outline_thickness}px
-                        </p>
-                      </div>
-                    )}
-                    {selectedOrder.design_details?.text_position_x !== undefined && selectedOrder.design_details?.text_position_y !== undefined && (
-                      <div>
-                        <p style={{ fontSize: "12px", color: "#b45309", marginBottom: "4px" }}>Text Position</p>
-                        <p style={{ fontSize: "13px", color: "#111827", fontWeight: "500" }}>
-                          X: {selectedOrder.design_details.text_position_x}% Y: {selectedOrder.design_details.text_position_y}%
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
 
-              {/* Thread Colors */}
-              {selectedOrder.design_details?.thread_colors && selectedOrder.design_details.thread_colors.length > 0 && (
-                <div style={{ marginBottom: "24px", padding: "16px", background: "#f3e8ff", borderRadius: "8px", border: "1px solid #e9d5ff" }}>
-                  <h3 style={{ fontSize: "14px", fontWeight: "600", color: "#6b21a8", marginBottom: "12px" }}>
-                    🧵 Thread Colors ({selectedOrder.design_details.thread_colors.length})
-                  </h3>
-                  <div style={{ marginBottom: "12px" }}>
-                    <p style={{ fontSize: "12px", color: "#6b21a8", marginBottom: "4px" }}>Brand: {selectedOrder.design_details.thread_brand || "Not specified"}</p>
-                  </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))", gap: "12px", marginBottom: "12px" }}>
-                    {selectedOrder.design_details.thread_colors.map((color, index) => (
-                      <div key={index} style={{ display: "flex", alignItems: "center", gap: "8px", padding: "8px", background: "white", borderRadius: "6px" }}>
-                        <div
-                          style={{
-                            width: "36px",
-                            height: "36px",
-                            background: color.hex || color,
-                            borderRadius: "4px",
-                            border: "2px solid #d8b4fe",
-                            flexShrink: 0,
-                          }}
-                        />
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <p style={{ fontSize: "12px", color: "#111827", fontWeight: "600", margin: "0", overflow: "hidden", textOverflow: "ellipsis" }}>
-                            {color.name || "Color"}
-                          </p>
-                          <p style={{ fontSize: "11px", color: "#6b7280", margin: "0", overflow: "hidden", textOverflow: "ellipsis" }}>
-                            {color.code || color.hex || ""}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  {selectedOrder.design_details.thread_notes && (
-                    <div style={{ padding: "8px", background: "white", borderRadius: "6px", border: "1px solid #e9d5ff" }}>
-                      <p style={{ fontSize: "11px", color: "#6b7280", marginBottom: "4px", fontWeight: "600" }}>Notes:</p>
-                      <p style={{ fontSize: "12px", color: "#111827", margin: "0", whiteSpace: "pre-wrap" }}>
-                        {selectedOrder.design_details.thread_notes}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              )}
 
               {/* Advanced Settings */}
               <div style={{ marginBottom: "24px", padding: "16px", background: "#eff6ff", borderRadius: "8px", border: "1px solid #bfdbfe" }}>
@@ -1058,6 +973,39 @@ function AdminDashboardContent() {
                   </button>
                 </div>
               )}
+
+              {/* Chat Button */}
+              <div style={{ marginBottom: "24px" }}>
+                <button
+                  onClick={() => onChatClick && onChatClick(selectedOrder.id)}
+                  style={{
+                    padding: "12px 24px",
+                    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                    color: "white",
+                    border: "none",
+                    borderRadius: "8px",
+                    fontSize: "14px",
+                    fontWeight: "600",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    width: "100%",
+                    justifyContent: "center",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = "translateY(-1px)";
+                    e.currentTarget.style.boxShadow = "0 4px 12px rgba(102, 126, 234, 0.4)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = "translateY(0)";
+                    e.currentTarget.style.boxShadow = "none";
+                  }}
+                >
+                  <MessageCircle size={18} />
+                  Chat with Customer
+                </button>
+              </div>
 
               {/* Uploaded Files */}
               {(() => {

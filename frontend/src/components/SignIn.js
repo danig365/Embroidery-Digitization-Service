@@ -46,6 +46,9 @@ function SignIn() {
       if (data.success) {
         localStorage.setItem("access_token", data.tokens.access);
         localStorage.setItem("refresh_token", data.tokens.refresh);
+        if (data.user && data.user.id) {
+          localStorage.setItem("user_id", data.user.id);
+        }
         
         if (formData.rememberMe) {
           localStorage.setItem("remember_me", "true");
