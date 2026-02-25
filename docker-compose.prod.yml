@@ -1,0 +1,85 @@
+version: '3.8'
+
+# Production overrides for docker-compose.yml
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+
+services:
+  nginx:
+    image: nginx:alpine
+    container_name: embroidery_nginx
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./backend/staticfiles:/app/backend/staticfiles:ro
+      - ./backend/media:/app/backend/media:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - ./certbot:/var/www/certbot:ro
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - embroidery_network
+
+  postgres:
+    restart: always
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - embroidery_network
+
+  backend:
+    restart: always
+    environment:
+      DEBUG: ${DEBUG}
+      SECRET_KEY: ${SECRET_KEY}
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS}
+      FRONTEND_URL: ${FRONTEND_URL}
+      DB_ENGINE: ${DB_ENGINE}
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_HOST: postgres
+      DB_PORT: 5432
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
+      STRIPE_PUBLISHABLE_KEY: ${STRIPE_PUBLISHABLE_KEY}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET}
+      SECURE_SSL_REDIRECT: ${SECURE_SSL_REDIRECT}
+      SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE}
+      CSRF_COOKIE_SECURE: ${CSRF_COOKIE_SECURE}
+      SECURE_HSTS_SECONDS: ${SECURE_HSTS_SECONDS}
+      SECURE_HSTS_INCLUDE_SUBDOMAINS: ${SECURE_HSTS_INCLUDE_SUBDOMAINS}
+      SECURE_HSTS_PRELOAD: ${SECURE_HSTS_PRELOAD}
+    expose:
+      - "8000"
+    volumes:
+      - ./backend/media:/app/backend/media
+      - ./backend/staticfiles:/app/backend/staticfiles
+    networks:
+      - embroidery_network
+
+  frontend:
+    restart: always
+    environment:
+      REACT_APP_API_URL: /api
+    expose:
+      - "3000"
+    volumes:
+      - ./frontend/build:/app/build:ro
+    networks:
+      - embroidery_network
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  embroidery_network:
+    driver: bridge

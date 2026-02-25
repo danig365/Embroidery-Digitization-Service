@@ -1,0 +1,79 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: embroidery_db
+    env_file:
+      - ./.env
+    environment:
+      POSTGRES_DB: ${DB_NAME:-embroidery_db}
+      POSTGRES_USER: ${DB_USER:-embroidery_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-securepassword}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-embroidery_user}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: ../Dockerfile.backend
+    container_name: embroidery_api
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file:
+      - ./backend/.env
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+    volumes:
+      - ./backend/media:/app/backend/media
+      - ./backend/staticfiles:/app/backend/staticfiles
+    ports:
+      - "8000:8000"
+    command: sh -c "python manage.py migrate && gunicorn studio.wsgi --bind 0.0.0.0:8000 --workers 4 --timeout 300"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: ../Dockerfile.frontend
+      args:
+        REACT_APP_API_URL: /api
+        REACT_APP_STRIPE_PUBLISHABLE_KEY: pk_test_51RCasKQOwqqD0Bo5Wo1iYXwWjvY5rXuJwMOPgExENTNgCU9obOs4olQSQFcwbNHZr5cracOEFs4AYBTEIPE884JR003i1o5WXv
+        REACT_APP_GOOGLE_CLIENT_ID: ${REACT_APP_GOOGLE_CLIENT_ID}
+    container_name: embroidery_frontend
+    depends_on:
+      - backend
+    env_file:
+      - ./frontend/.env
+    ports:
+      - "3000:3000"
+
+  nginx:
+    image: nginx:alpine
+    container_name: embroidery_nginx
+    depends_on:
+      - backend
+      - frontend
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./backend/staticfiles:/app/backend/staticfiles:ro
+      - ./backend/media:/app/backend/media:ro
+    ports:
+      - "80:80"
+      - "443:443"
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+
+networks:
+  default:
+    name: embroidery_network
